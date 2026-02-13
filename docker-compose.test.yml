@@ -1,0 +1,15 @@
+services:
+  # テスト実行用コンテナ
+  snmp-tester:
+    build: .
+    environment:
+      - TARGET_HOST=snmp-receiver
+      - TARGET_PORT=162
+      - COMMUNITY_STRING=public
+    volumes:
+      - ./tests:/app/tests
+    entrypoint: ["python", "/app/tests/send_trap.py"]
+    depends_on:
+      - snmp-receiver
+    # コマンドで上書き可能にするため、CMDは空にしておくかデフォルト値を設定
+    command: ["both"]
