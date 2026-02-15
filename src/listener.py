@@ -7,6 +7,7 @@ from src.resolver import MibResolver
 from src.dispatcher import Dispatcher
 import logging
 import asyncio
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,8 @@ class TrapListener:
             "source_ip": transportAddress[0],
             "source_port": transportAddress[1],
             "snmp_version": "v3" if contextEngineId else "v2c", # 簡易判定
-            "variables": resolved_vars
+            "variables": resolved_vars,
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
         # 非同期処理としてDispatcherへ渡す

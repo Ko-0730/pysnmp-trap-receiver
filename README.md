@@ -47,7 +47,29 @@ docker-compose up --build
 snmptrap -v 2c -c public localhost:162 '' 1.3.6.1.4.1.8072.2.3.0.1 1.3.6.1.2.1.1.5.0 s "Test Trap Message"
 ```
 
-**ログ出力例:**
+**JSON出力フォーマット:**
+
+受信したTrapは以下のJSON構造に変換されます。
+
+| フィールド | 型 | 説明 |
+| :--- | :--- | :--- |
+| `source_ip` | string | Trap送信元のIPアドレス |
+| `source_port` | integer | Trap送信元のポート番号 |
+| `snmp_version` | string | `v2c` または `v3` |
+| `timestamp` | string | 受信時刻 (ISO8601形式) |
+| `variables` | array | 変数バインディング (VarBinds) のリスト |
+
+**`variables` 配列内のオブジェクト構造:**
+
+| フィールド | 型 | 説明 |
+| :--- | :--- | :--- |
+| `oid` | string | オブジェクト識別子 (OID) |
+| `mib` | string | 解決されたMIBモジュール名 (不明な場合は `UNKNOWN` または `ERROR`) |
+| `name` | string | MIBオブジェクト名 (解決できない場合はOIDそのまま) |
+| `suffix` | string | インデックスなどのサフィックス |
+| `value` | string | 解決・整形された値 |
+
+**出力例:**
 ```json
 {
   "source_ip": "172.18.0.1",
@@ -76,7 +98,7 @@ snmptrap -v 2c -c public localhost:162 '' 1.3.6.1.4.1.8072.2.3.0.1 1.3.6.1.2.1.1
       "value": "Test Trap Message"
     }
   ],
-  "timestamp": "2024-05-20T10:00:00Z"
+  "timestamp": "2024-05-20T10:00:00+00:00"
 }
 ```
 
