@@ -28,14 +28,40 @@ def compile_mibs(src_dir, dest_dir):
         PyFileWriter(dest_dir)
     )
 
-    # ローカルのMIBソースを追加
-    print(f"Adding source directory: {src_dir}")
-    try:
-        # pysmi >= 1.0.0 uses add_sources
-        mibCompiler.add_sources(FileReader(src_dir))
-    except AttributeError:
-        # pysmi < 1.0.0 uses addSources
-        mibCompiler.addSources(FileReader(src_dir))
+    # ローカルのMIBソースディレクトリを探索して追加
+    print(f"Scanning source directory: {src_dir}")
+    source_dirs = set()
+    mib_modules = []
+    
+    # os.walkで再帰的に探索
+    for root, dirs, files in os.walk(src_dir):
+        # MIBファイルを含むディレクトリをソースとして追加するため記録
+        has_mib = False
+        for f in files:
+            # 拡張子チェック (.mib, .my, .txt)
+            if f.endswith(('.mib', '.my', '.txt')) and not f.startswith('.'):
+                has_mib = True
+                filename = os.path.basename(f)
+                # 拡張子を取り除く
+                module_name = os.path.splitext(filename)[0]
+                mib_modules.append(module_name)
+        
+        if has_mib:
+            source_dirs.add(root)
+    
+    if not source_dirs:
+        print(f"No MIB files found in {src_dir} or its subdirectories")
+        return
+
+    # 各ディレクトリをソースとして追加
+    for d in source_dirs:
+        print(f"Adding source directory: {d}")
+        try:
+            # pysmi >= 1.0.0 uses add_sources
+            mibCompiler.add_sources(FileReader(d))
+        except AttributeError:
+            # pysmi < 1.0.0 uses addSources
+            mibCompiler.addSources(FileReader(d))
 
     # 標準的なMIBソースも追加（依存関係解決のため）
     # 注: インターネット接続が必要
@@ -50,20 +76,9 @@ def compile_mibs(src_dir, dest_dir):
 
     # 検索パスの設定（ローカル優先）
     try:
-        mibCompiler.add_searchers(StubSearcher(*[src_dir]))
+        mibCompiler.add_searchers(StubSearcher(*list(source_dirs)))
     except AttributeError:
-        mibCompiler.addSearchers(StubSearcher(*[src_dir]))
-
-    # コンパイル対象のモジュール名を収集
-    mib_files = glob.glob(os.path.join(src_dir, "*"))
-    mib_modules = []
-    
-    for f in mib_files:
-        if os.path.isfile(f) and not f.endswith(".py") and not f.endswith(".pyc"):
-            filename = os.path.basename(f)
-            # 拡張子を取り除く（.mib, .myなど）
-            module_name = os.path.splitext(filename)[0]
-            mib_modules.append(module_name)
+        mibCompiler.addSearchers(StubSearcher(*list(source_dirs)))
 
     if not mib_modules:
         print(f"No MIB files found in {src_dir}")
