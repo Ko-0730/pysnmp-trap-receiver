@@ -20,15 +20,23 @@ class MibResolver:
         
         # MIBソースディレクトリの設定
         # pysnmpのデフォルトパスに加えて、カスタムMIBディレクトリを追加
+        # 優先順位: 1. /opt/mibs (コンパイル済み), 2. settings.mib_dir
+        
+        # コンパイル済みMIBディレクトリ (/opt/mibs) を優先的に追加
+        compiled_mib_path = '/opt/mibs'
+        if os.path.exists(compiled_mib_path):
+            self.mibBuilder.addMibSources(builder.DirMibSource(compiled_mib_path))
+            logger.info(f"Added compiled MIB source directory: {compiled_mib_path}")
+        
         mib_path = os.path.abspath(settings.mib_dir)
-        if os.path.exists(mib_path):
+        if os.path.exists(mib_path) and mib_path != compiled_mib_path:
             self.mibBuilder.addMibSources(builder.DirMibSource(mib_path))
             logger.info(f"Added MIB source directory: {mib_path}")
         else:
-            logger.warning(f"MIB directory not found: {mib_path}")
+            logger.debug(f"MIB directory not found or duplicate: {mib_path}")
 
-        # コンパイル機能を使用する場合の設定（pysmiが必要）
-        # pysnmpに標準MIBが含まれていない場合、外部から取得してコンパイルする設定を追加
+        # 動的コンパイル機能の設定（必要な場合のみ）
+        # 基本的にはビルド時にコンパイル済みだが、未解決のMIBがある場合のフォールバック
         try:
             from pysnmp.smi import compiler
             # コンパイラを追加し、IF-MIBなどを自動的にダウンロード・コンパイルする
@@ -36,15 +44,16 @@ class MibResolver:
             compiler.addMibCompiler(self.mibBuilder, sources=[
                 'https://mibs.pysnmp.com/asn1/@mib@'
             ])
-            # コンパイル済みファイルの保存先
-            self.mibBuilder.addMibSources(builder.DirMibSource('/opt/mibs'))
-            
         except Exception as e:
-            logger.warning(f"Failed to configure MIB compiler: {e}")
+            logger.warning(f"Failed to configure dynamic MIB compiler: {e}")
 
         self.mibViewController = view.MibViewController(self.mibBuilder)
         
         # 指定ディレクトリ内のMIBモジュールをロード
+        # コンパイル済みのMIBディレクトリからもロードを試みる
+        if os.path.exists('/opt/mibs'):
+             self._load_mibs_from_directory('/opt/mibs')
+        
         self._load_mibs_from_directory(mib_path)
 
     def _load_mibs_from_directory(self, mib_path):

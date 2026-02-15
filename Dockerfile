@@ -15,12 +15,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # MIBコンパイル用の準備
-# ここでは標準MIBとベンダーMIBをコンパイルする
-# 実際にはpysmiのmibdump.pyを使用するか、カスタムスクリプトを実行する
-# 今回は標準的なディレクトリ構成を作成し、実行時にロードできる状態にする
+COPY mibs/src/ ./mibs/src/
+COPY scripts/ ./scripts/
 
-# アプリケーションコードのコピー（必要であればここで行う処理を追加）
-# 今回はRuntimeステージでコピーするためスキップ
+# コンパイル実行 (出力先: mibs/compiled)
+RUN python scripts/compile_mibs.py mibs/src mibs/compiled
 
 # Stage 2: Runtime
 # 実行用イメージ
@@ -48,10 +47,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # アプリケーションコードのコピー
 COPY src/ ./src/
-COPY mibs/ ./mibs/
+# コンパイル済みMIBをコピー
+COPY --from=builder /build/mibs/compiled /opt/mibs
+# 元のMIBソースも必要であればコピー（今回はコンパイル済みのみを使用するため除外も可能だが、念のため構造を維持する場合は残す）
+# COPY mibs/ ./mibs/ 
 
-# MIBディレクトリの作成
-RUN mkdir -p /opt/mibs && chown -R snmpuser:snmpuser /opt/mibs
+# MIBディレクトリの権限設定
+RUN chown -R snmpuser:snmpuser /opt/mibs
 
 # 実行ユーザーの切り替え
 USER snmpuser

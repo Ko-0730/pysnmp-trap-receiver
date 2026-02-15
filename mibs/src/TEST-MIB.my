@@ -1,0 +1,21 @@
+TEST-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-IDENTITY, enterprises
+        FROM SNMPv2-SMI;
+
+testMib MODULE-IDENTITY
+    LAST-UPDATED "202402140000Z"
+    ORGANIZATION "Test Org"
+    CONTACT-INFO "test@example.com"
+    DESCRIPTION "A test MIB for compilation verification."
+    REVISION "202402140000Z"
+    DESCRIPTION "Initial version."
+    ::= { enterprises 99999 }
+
+testObject OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION "A test object."
+    ::= { testMib 1 }
+
+END
